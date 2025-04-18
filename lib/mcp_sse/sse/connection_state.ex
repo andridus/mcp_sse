@@ -144,7 +144,7 @@ defmodule SSE.ConnectionState do
   end
 
   @impl true
-  def handle_info(:init_timeout, %{state: :ready} = state) do
+  def handle_info(:init_timeout, %{state: status} = state) when status in [:ready, :connected] do
     {:noreply, state}
   end
 
