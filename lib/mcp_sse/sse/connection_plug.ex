@@ -144,7 +144,6 @@ defmodule SSE.ConnectionPlug do
 
         _ ->
           if Map.has_key?(message, "id") do
-            IO.inspect(conn, label: "message")
             # Handle requests that expect responses
             case MessageRouter.handle_message(session_id, message) do
               {:ok, nil} ->
