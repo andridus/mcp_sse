@@ -94,7 +94,7 @@ defmodule SSE.ConnectionPlug do
   end
 
   defp handle_sse(conn) do
-    session_id = generate_session_id()
+    session_id = conn.query_params["sessionId"]
     {:ok, state_pid} = ConnectionState.start_link(session_id)
     # Set SSE pid in connection state
     ConnectionState.set_sse_pid(state_pid, self())
@@ -124,7 +124,7 @@ defmodule SSE.ConnectionPlug do
           Logger.debug("Full message: #{inspect(msg, pretty: true)}")
           ConnectionState.handle_initialize(state_pid)
 
-          case MessageRouter.handle_message(msg) do
+          case MessageRouter.handle_message(session_id, msg) do
             {:ok, response} ->
               Logger.debug("Sending SSE response: #{inspect(response, pretty: true)}")
               send(sse_pid, {:send_sse_message, response})
@@ -144,8 +144,9 @@ defmodule SSE.ConnectionPlug do
 
         _ ->
           if Map.has_key?(message, "id") do
+            IO.inspect(conn, label: "message")
             # Handle requests that expect responses
-            case MessageRouter.handle_message(message) do
+            case MessageRouter.handle_message(session_id, message) do
               {:ok, nil} ->
                 conn |> put_status(202) |> send_json(%{status: "ok"})
 
@@ -354,10 +355,4 @@ defmodule SSE.ConnectionPlug do
 
   defp validate_jsonrpc_message(_), do: {:error, :invalid_jsonrpc}
 
-  defp generate_session_id do
-    <<i1::32, i2::32, i3::32>> = :crypto.strong_rand_bytes(12)
-
-    :io_lib.format("~8.16.0b-~8.16.0b-~8.16.0b", [i1, i2, i3])
-    |> List.to_string()
-  end
 end
